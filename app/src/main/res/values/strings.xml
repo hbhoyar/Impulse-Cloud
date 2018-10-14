@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Impulse Cloud</string>
     <string name="title_activity_folder">FolderActivity</string>
+    <string name="cancel">Cancel</string>
+    <string name="add_folder">Add Folder</string>
+    <string name="enter_folder_name">Enter Folder name</string>
 </resources>

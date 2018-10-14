@@ -7,15 +7,17 @@
 
     <TextView
         android:id="@+id/itemname"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="32dp"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
         android:layout_marginTop="4dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginRight="8dp"
         android:layout_marginBottom="4dp"
-        android:gravity="center"
-        android:text="TextView"
+        android:gravity="center_vertical"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/deleteicon"
         app:layout_constraintStart_toEndOf="@+id/itemicon"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.511" />
@@ -44,6 +46,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@android:drawable/ic_menu_delete" />
+        app:srcCompat="@drawable/delete_icon" />
 
 </android.support.constraint.ConstraintLayout>

@@ -33,7 +33,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText mUsername, mPassword;
     private Button mLogin;
     private String username, password, cookie;
-    private String url =  "http://10.42.0.1:8000/";
+    private String url =  "http://192.168.43.24:8000/";
     private String Post_data;
 
     @Override
@@ -60,7 +60,6 @@ public class LoginActivity extends AppCompatActivity {
 
         @Override
         protected Boolean doInBackground(Void... x) {
-            JSONObject data;
             Boolean a;
             try {
                 a = sendPost();
@@ -88,6 +87,8 @@ public class LoginActivity extends AppCompatActivity {
                     Intent intent = new Intent(getApplicationContext(),FolderActivity.class);
                     intent.putExtra("url", url+"api/");
                     intent.putExtra("cookie", cookie);
+                    intent.putExtra("title", username);
+                    intent.putExtra("msg", "Logging In");
                     startActivity(intent);
                 }
 //            };

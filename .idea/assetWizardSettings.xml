@@ -23,7 +23,7 @@
                                           <PersistentState>
                                             <option name="values">
                                               <map>
-                                                <entry key="url" value="jar:file:/home/himanshu/Downloads/android-studio-ide-173.4907809-linux/android-studio/plugins/android/lib/android.jar!/images/material_design_icons/file/ic_folder_black_24dp.xml" />
+                                                <entry key="url" value="jar:file:/home/himanshu/Downloads/android-studio-ide-173.4907809-linux/android-studio/plugins/android/lib/android.jar!/images/material_design_icons/editor/ic_insert_drive_file_black_24dp.xml" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -33,11 +33,10 @@
                                   </option>
                                   <option name="values">
                                     <map>
-                                      <entry key="assetType" value="IMAGE" />
                                       <entry key="imageAsset" value="$PROJECT_DIR$/app/src/main/res/drawable/data_docs_document_file_google_suits_icon_512.png" />
                                       <entry key="outputName" value="file_icon" />
                                       <entry key="theme" value="CUSTOM" />
-                                      <entry key="themeColor" value="2ce5ac" />
+                                      <entry key="themeColor" value="4fe5c0" />
                                     </map>
                                   </option>
                                 </PersistentState>
