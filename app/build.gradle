@@ -16,6 +16,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    //For including Apache http libraries
+    useLibrary 'org.apache.http.legacy'
 }
 
 dependencies {
@@ -25,6 +27,15 @@ dependencies {
     implementation 'com.android.support:design:28.0.0'
     //Easy permissions for handling Run time permissions
     implementation 'pub.devrel:easypermissions:0.2.0'
+
+    //Apache httpclient-android library
+    implementation group: 'org.apache.httpcomponents', name: 'httpclient-android', version: '4.3.5.1'
+
+    //Excluding httpclient since it is already part of httpclient-android
+    implementation('org.apache.httpcomponents:httpmime:4.3') {
+        exclude module: "httpclient"
+    }
+
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'

@@ -2,12 +2,20 @@ package warrior.himanshu.impulsecloud;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -25,6 +33,17 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.cookie.BasicClientCookie;
+import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,17 +57,20 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.CookieStore;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 import pub.devrel.easypermissions.EasyPermissions;
 
 
-public class FolderActivity extends AppCompatActivity {
+public class FolderActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks {
 
     private ListView listView;
     private String cookie;
@@ -60,6 +82,15 @@ public class FolderActivity extends AppCompatActivity {
     private Boolean isOpen = false;
     private static final String TAG = FolderActivity.class.getSimpleName();
     private static final int WRITE_REQUEST_CODE = 300;
+    private static final int READ_REQUEST_CODE = 300;
+    private static final int REQUEST_FILE_CODE = 200;
+    FloatingActionButton fileBrowseBtn;
+    Button uploadBtn, btn_cancel_file;
+    ImageView previewImage;
+    TextView fileName;
+    Uri fileUri;
+    ConstraintLayout file_layout;
+    private File file;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,7 +104,46 @@ public class FolderActivity extends AppCompatActivity {
         final EditText new_folder_name = findViewById(R.id.newFolderText);
         final Button btn_add_folder = findViewById(R.id.btn_addfolder);
         final Button btn_cancel_folder = findViewById(R.id.btn_cancelfolder);
+        btn_cancel_file = findViewById(R.id.btn_cancelfile);
+        fileBrowseBtn = add_file;
+        file_layout = findViewById(R.id.add_file_layout);
+        uploadBtn = findViewById(R.id.btn_upload);
+        previewImage = findViewById(R.id.iv_preview);
+        fileName = findViewById(R.id.tv_file_name);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+
+        fileBrowseBtn.setOnClickListener(new View.OnClickListener() {
+            @SuppressLint("InlinedApi")
+            @Override
+            public void onClick(View v) {
+
+                //check if app has permission to access the external storage.
+                if (EasyPermissions.hasPermissions(FolderActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                    showFileChooserIntent();
+
+                } else {
+                    //If permission is not present request for the same.
+                    EasyPermissions.requestPermissions(FolderActivity.this, getString(R.string.read_file), READ_REQUEST_CODE, Manifest.permission.READ_EXTERNAL_STORAGE);
+                }
+
+            }
+        });
+
+        uploadBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (file != null) {
+                    UploadAsyncTask uploadAsyncTask = new UploadAsyncTask(FolderActivity.this);
+                    uploadAsyncTask.execute(newfileurl);
+
+                } else {
+                    Toast.makeText(getApplicationContext(),
+                            "Please select a file first", Toast.LENGTH_LONG).show();
+
+                }
+            }
+        });
+
         fab.setOnClickListener(new View.OnClickListener() {
             @SuppressLint("RestrictedApi")
             @Override
@@ -94,12 +164,19 @@ public class FolderActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 folder_layout.setVisibility(View.VISIBLE);
+
             }
         });
         btn_cancel_folder.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 folder_layout.setVisibility(View.INVISIBLE);
+            }
+        });
+        btn_cancel_file.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                file_layout.setVisibility(View.INVISIBLE);
             }
         });
         btn_add_folder.setOnClickListener(new View.OnClickListener() {
@@ -126,6 +203,111 @@ public class FolderActivity extends AppCompatActivity {
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_FILE_CODE && resultCode == Activity.RESULT_OK) {
+            fileUri = data.getData();
+            previewFile(fileUri);
+        }
+    }
+
+    /**
+     * Show the file name and preview once the file is chosen
+     * @param uri
+     */
+    private void previewFile(Uri uri) {
+        String filePath = getRealPathFromURIPath(uri, FolderActivity.this);
+        file = new File(filePath);
+        Log.d(TAG, "Filename " + file.getName());
+        fileName.setText(file.getName());
+
+        ContentResolver cR = this.getContentResolver();
+        String mime = cR.getType(uri);
+
+        //Show preview if the uploaded file is an image.
+        if (mime != null && mime.contains("image")) {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+
+            // down sizing image as it throws OutOfMemory Exception for larger
+            // images
+            options.inSampleSize = 8;
+
+            final Bitmap bitmap = BitmapFactory.decodeFile(filePath, options);
+
+            previewImage.setImageBitmap(bitmap);
+        } else {
+            previewImage.setImageResource(R.drawable.ic_file);
+        }
+
+        showFileChooser();
+    }
+
+    /**
+     * Shows an intent which has options from which user can choose the file like File manager, Gallery etc
+     */
+    private void showFileChooserIntent() {
+        Intent fileManagerIntent = new Intent(Intent.ACTION_GET_CONTENT);
+        //Choose any file
+        fileManagerIntent.setType("*/*");
+        startActivityForResult(fileManagerIntent, REQUEST_FILE_CODE);
+
+    }
+
+    /**
+     * Returns the actual path of the file in the file system
+     *
+     * @param contentURI
+     * @param activity
+     * @return
+     */
+    private String getRealPathFromURIPath(Uri contentURI, Activity activity) {
+        Cursor cursor = activity.getContentResolver().query(contentURI, null, null, null, null);
+        String realPath = "";
+        if (cursor == null) {
+            realPath = contentURI.getPath();
+        } else {
+            cursor.moveToFirst();
+            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+            realPath = cursor.getString(idx);
+        }
+        if (cursor != null) {
+            cursor.close();
+        }
+
+        return realPath;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, FolderActivity.this);
+    }
+
+    @Override
+    public void onPermissionsGranted(int requestCode, List<String> perms) {
+        showFileChooserIntent();
+    }
+
+    @Override
+    public void onPermissionsDenied(int requestCode, List<String> perms) {
+        Log.d(TAG, "Permission has been denied");
+    }
+
+    /**
+     * Hides the Choose file button and displays the file preview, file name and upload button
+     */
+    private void hideFileChooser() {
+        file_layout.setVisibility(View.INVISIBLE);
+    }
+
+    /**
+     *  Displays Choose file button and Hides the file preview, file name and upload button
+     */
+    private void showFileChooser() {
+        file_layout.setVisibility(View.VISIBLE);
 
     }
 
@@ -292,6 +474,102 @@ public class FolderActivity extends AppCompatActivity {
         }
 
     }
+
+    private class UploadAsyncTask extends AsyncTask<String, Integer, String> {
+
+        HttpClient httpClient = new DefaultHttpClient();
+        private Context context;
+        private Exception exception;
+        private ProgressDialog progressDialog;
+
+        private UploadAsyncTask(Context context) {
+            this.context = context;
+        }
+
+        @Override
+        protected String doInBackground(String... params) {
+
+            HttpResponse httpResponse = null;
+            HttpEntity httpEntity = null;
+            String responseString = null;
+
+            try {
+                HttpPost httpPost = new HttpPost(params[0]);
+                MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
+
+                // Add the file to be uploaded
+                multipartEntityBuilder.addPart("data", new FileBody(file));
+
+                // Progress listener - updates task's progress
+                MyHttpEntity.ProgressListener progressListener =
+                        new MyHttpEntity.ProgressListener() {
+                            @Override
+                            public void transferred(float progress) {
+                                publishProgress((int) progress);
+                            }
+                        };
+
+                // POST
+                httpPost.setEntity(new MyHttpEntity(multipartEntityBuilder.build(),
+                        progressListener));
+                httpPost.addHeader("Cookie", cookie);
+
+                httpResponse = httpClient.execute(httpPost);
+                httpEntity = httpResponse.getEntity();
+
+                int statusCode = httpResponse.getStatusLine().getStatusCode();
+                if (statusCode == 200) {
+                    // Server response
+                    responseString = EntityUtils.toString(httpEntity);
+                } else {
+                    responseString = "Error occurred! Http Status Code: "
+                            + statusCode;
+                }
+            } catch (UnsupportedEncodingException | ClientProtocolException e) {
+                e.printStackTrace();
+                Log.e("UPLOAD", e.getMessage());
+                this.exception = e;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return responseString;
+        }
+
+        @Override
+        protected void onPreExecute() {
+
+            // Init and show dialog
+            this.progressDialog = new ProgressDialog(this.context);
+            this.progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            this.progressDialog.setCancelable(false);
+            this.progressDialog.show();
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+
+            // Close dialog
+            this.progressDialog.dismiss();
+            Toast.makeText(getApplicationContext(),
+                    "Successfully Uploaded " + fileName.getText(), Toast.LENGTH_LONG).show();
+            Intent intent = new Intent(getApplicationContext(), FolderActivity.class);
+            intent.putExtra("url", url1);
+            intent.putExtra("cookie", cookie);
+            intent.putExtra("title", mainfname);
+            intent.putExtra("msg", "Refreshing");
+            finish();
+            startActivity(intent);
+
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... progress) {
+            // Update process
+            this.progressDialog.setProgress((int) progress[0]);
+        }
+    }
+
 
     @SuppressLint("StaticFieldLeak")
     private class DownloadFile extends AsyncTask<String, String, String> {

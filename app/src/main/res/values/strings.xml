@@ -5,4 +5,7 @@
     <string name="add_folder">Add Folder</string>
     <string name="enter_folder_name">Enter Folder name</string>
     <string name="write_file">This app needs access to your file storage so that it can write files.</string>
+    <string name="read_file">This app needs access to your file storage so that it can read files.</string>
+    <string name="filename">FileName</string>
+    <string name="upload_file">Upload File</string>
 </resources>
