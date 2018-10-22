@@ -33,7 +33,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText mUsername, mPassword;
     private Button mLogin;
     private String username, password, cookie;
-    private String url =  "http://192.168.43.24:8000/";
+    private String url =  "http://hbhoyar.pythonanywhere.com/";
     private String Post_data;
 
     @Override

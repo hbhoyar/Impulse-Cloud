@@ -15,6 +15,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
@@ -219,7 +220,8 @@ public class FolderActivity extends AppCompatActivity implements EasyPermissions
      * @param uri
      */
     private void previewFile(Uri uri) {
-        String filePath = getRealPathFromURIPath(uri, FolderActivity.this);
+        String filePath = getRealPathFromURIPath(uri , FolderActivity.this);
+        assert filePath != null;
         file = new File(filePath);
         Log.d(TAG, "Filename " + file.getName());
         fileName.setText(file.getName());
@@ -249,9 +251,10 @@ public class FolderActivity extends AppCompatActivity implements EasyPermissions
      * Shows an intent which has options from which user can choose the file like File manager, Gallery etc
      */
     private void showFileChooserIntent() {
-        Intent fileManagerIntent = new Intent(Intent.ACTION_GET_CONTENT);
+        @SuppressLint("InlinedApi") Intent fileManagerIntent = new Intent(Intent.ACTION_GET_CONTENT);
         //Choose any file
         fileManagerIntent.setType("*/*");
+        fileManagerIntent.addCategory(Intent.CATEGORY_OPENABLE);
         startActivityForResult(fileManagerIntent, REQUEST_FILE_CODE);
 
     }
@@ -270,7 +273,7 @@ public class FolderActivity extends AppCompatActivity implements EasyPermissions
             realPath = contentURI.getPath();
         } else {
             cursor.moveToFirst();
-            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+            int idx = cursor.getColumnIndex(MediaStore.Images.Media.DATA);
             realPath = cursor.getString(idx);
         }
         if (cursor != null) {
